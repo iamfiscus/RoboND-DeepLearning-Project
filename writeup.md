@@ -13,6 +13,14 @@ scenarios. However the second model seemed to come out better.
 [image_0]: ./docs/misc/sim_screenshot.png
 [network]: ./docs/misc/NeuralNetworkDiagram.png
 [final-network]: ./docs/misc/FinalNeuralNetworkDiagram.png
+[follow]: ./docs/misc/follow.png
+[patrol]: ./docs/misc/patrol.png
+[patrol-target]: ./docs/misc/patrol-target.png
+[result]: ./docs/misc/result.png
+[follow-model1]: ./docs/misc/follow.png
+[patrol-model1]: ./docs/misc/patrol.png
+[patrol-target-model1]: ./docs/misc/patrol-target.png
+[result-model1]: ./docs/misc/result.png
 
 ![alt text][image_0]
 
@@ -80,14 +88,64 @@ proper probability.
 
 After thinking about it for a bit, I decided on a multiple layered fully
 convolutional neural network model. This model has 5 layers, 2 encoders, 2
-decoders, and 1x1 convolution layer.
+decoders, and 1x1 convolution layer. Finally I got a successful score of
+**0.40**.
 
 ![Network Architecture][network]
 
+```python
+# Model 1
+def fcn_model(inputs, num_classes):
+
+    # TODO Add Encoder Blocks.
+    # Remember that with each encoder layer, the depth of your model (the number of filters) increases.
+    first_filter = 32
+    second_filter = 64
+    conv_filter = 128
+
+    first_layer = encoder_block(inputs, first_filter, strides=2)
+    second_layer = encoder_block(first_layer, second_filter, strides=2)
+
+    # TODO Add 1x1 Convolution layer using conv2d_batchnorm().
+    conv_layer = conv2d_batchnorm(second_layer, conv_filter, kernel_size=1, strides=1)
+
+    # TODO: Add the same number of Decoder Blocks as the number of Encoder Blocks
+    third_layer = decoder_block(conv_layer, first_layer, second_filter)
+    x = decoder_block(third_layer, inputs, first_filter)
+
+    # The function returns the output layer of your model. "x" is the final layer obtained from the last decoder_block()
+    return layers.Conv2D(num_classes, 1, activation='softmax', padding='same')(x)
+```
+
+##### Successful Result
+
+**Hyperparameters**
+
+```python
+learning_rate = 0.005
+batch_size = 20
+num_epochs = 10
+steps_per_epoch = 250
+validation_steps = 70
+workers = 2
+```
+
+**Hero being followed**
+
+![result image][follow-model1]
+
+**Patrolling for Hero**
+
+![result image][patrol-model1]
+
+**Patrolling with Hero**
+
+![result image][patrol-target-model1]
+
 ##### Limitations
 
-Unfortunately this didn't work well enough I consistently got a successful score
-of 0.23-0.25. However I'll discuss this further in scenarios section.
+Unfortunately this didn't work well enough I consistently got a \ score of
+0.23-0.25. However I'll discuss this further in scenarios section.
 
 #### Final Model
 
@@ -97,6 +155,56 @@ concated on top of the previous results, which is very similar to a skip. The
 goal being to use color channels to identify the mostly red hero.
 
 ![Network Architecture][final-network]
+
+```python
+# Final Model
+def fcn_model(inputs, num_classes):
+
+    # TODO Add Encoder Blocks.
+    # Remember that with each encoder layer, the depth of your model (the number of filters) increases.
+    one_conv_layer_classifier = conv2d_batchnorm(input_layer=inputs, filters=10 , kernel_size=1 , strides=1)
+    one_conv_layer_classifier = conv2d_batchnorm(input_layer=one_conv_layer_classifier, filters=10 , kernel_size=1 , strides=1)
+    one_conv_layer_classifier = layers.concatenate([one_conv_layer1, inputs])
+
+    encoder_layer = encoder_block(input_layer=one_conv_layer_classifier, filters=32, strides=2)
+    encoder_layer = encoder_block(input_layer=encoder_layer, filters=64, strides=2)
+
+    # TODO Add 1x1 Convolution layer using conv2d_batchnorm().
+    one_conv_layer = conv2d_batchnorm(input_layer=encoder_layer, filters=128 , kernel_size=1 , strides=1)
+
+    # TODO: Add the same number of Decoder Blocks as the number of Encoder Blocks
+    decoder_layer = decoder_block(small_ip_layer=one_conv_layer, large_ip_layer=encoder_layer, filters=64)
+
+    x = decoder_block(small_ip_layer=decoder_layer, large_ip_layer=one_conv_layer_classifier, filters =32)
+
+    # The function returns the output layer of your model. "x" is the final layer obtained from the last decoder_block()
+    return layers.Conv2D(num_classes, 1, activation='softmax', padding='same')(x)
+```
+
+##### Successful Result
+
+**Hyperparameters**
+
+```python
+learning_rate = 0.005
+batch_size = 20
+num_epochs = 10
+steps_per_epoch = 250
+validation_steps = 70
+workers = 2
+```
+
+**Hero being followed**
+
+![result image][follow]
+
+**Patrolling for Hero**
+
+![result image][patrol]
+
+**Patrolling with Hero**
+
+![result image][patrol-target]
 
 ##### Limitations
 
